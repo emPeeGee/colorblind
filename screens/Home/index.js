@@ -3,10 +3,11 @@ import { TouchableOpacity, Image, Text, View } from 'react-native';
 import { styles } from './styles';
 import { Header } from '../../components';
 
-export function Home() {
+export function Home({ navigation }) {
   const [isSoundOn, setIsSoundOn] = useState(true);
 
   onPlayPress = () => {
+    navigation.navigate('Game');
     console.log('onPlayPress event handler');
   };
 
