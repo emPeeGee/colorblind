@@ -4,19 +4,27 @@ import { styles } from './styles';
 import { Header } from '../../components';
 import { generateRGB, mutateRGB } from '../../utils';
 
-export function Game() {
+export function Game({ navigation }) {
   const [points, setPoints] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
   const [rgb, setRgb] = useState(generateRGB());
   const [size, setSize] = useState(2);
   const [diffTileIndex, setDiffTileIndex] = useState([]);
   const [diffTileColor, setDiffTileColor] = useState();
+  const [gameState, setGameState] = useState('INGAME'); // 'INGAME', 'PAUSED' and 'LOST'
+
   const { width } = Dimensions.get('window');
 
   useEffect(() => {
     generateNewRound();
     const interval = setInterval(() => {
-      setTimeLeft((time) => time - 1);
+      if (gameState === 'INGAME') {
+        if (timeLeft <= 0) {
+          setGameState('LOST');
+        } else {
+          setTimeLeft((time) => time - 1);
+        }
+      }
     }, 1000);
 
     return () => {
@@ -24,7 +32,7 @@ export function Game() {
     };
   }, []);
 
-  generateSizeIndex = (size) => {
+  const generateSizeIndex = (size) => {
     return Math.floor(Math.random() * size);
   };
 
@@ -39,23 +47,6 @@ export function Game() {
     setRgb(RGB);
   }
 
-  //  generateNewRound = () => {
-  //    const RGB = generateRGB();
-  //    const mRGB = mutateRGB(RGB);
-  //    const { points } = this.state;
-  //    const size = Math.min(Math.max(Math.floor(Math.sqrt(points)), 2), 5);
-
-  //    this.setState({
-  //      size,
-  //      diffTileIndex: [
-  //        this.generateSizeIndex(size),
-  //        this.generateSizeIndex(size),
-  //      ],
-  //      diffTileColor: `rgb(${mRGB.r}, ${mRGB.g}, ${mRGB.b})`,
-  //      rgb: RGB,
-  //    });
-  //  };
-
   const onTilePress = (rowIndex, columnIndex) => {
     if (rowIndex == diffTileIndex[0] && columnIndex == diffTileIndex[1]) {
       setPoints((p) => p + 1);
@@ -67,6 +58,39 @@ export function Game() {
     generateNewRound();
   };
 
+  const onBottomBarPress = async () => {
+    switch (gameState) {
+      case 'INGAME': {
+        setGameState('PAUSED');
+        break;
+      }
+      case 'PAUSED': {
+        setGameState('INGAME');
+        break;
+      }
+      case 'LOST': {
+        setPoints(0);
+        setTimeLeft(15);
+        setSize(2);
+        generateNewRound();
+
+        setGameState('INGAME');
+        break;
+      }
+    }
+  };
+
+  const onExitPress = () => {
+    navigation.goBack();
+  };
+
+  const bottomIcon =
+    gameState === 'INGAME'
+      ? require('../../assets/icons/pause.png')
+      : gameState === 'PAUSED'
+      ? require('../../assets/icons/play.png')
+      : require('../../assets/icons/replay.png');
+
   return (
     <View style={styles.container}>
       <Header />
@@ -77,38 +101,69 @@ export function Game() {
           width: width * 0.875,
           flexDirection: 'row'
         }}>
-        {Array(size)
-          .fill()
-          .map((val, columnIndex) => (
-            <View
-              style={{ flex: 1, flexDirection: 'column' }}
-              key={columnIndex}>
-              {Array(size)
-                .fill()
-                .map((val, rowIndex) => (
-                  <TouchableOpacity
-                    key={`${rowIndex}.${columnIndex}`}
-                    style={{
-                      backgroundColor:
-                        rowIndex == diffTileIndex[0] &&
-                        columnIndex == diffTileIndex[1]
-                          ? diffTileColor
-                          : `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
+        {gameState === 'INGAME' ? (
+          Array(size)
+            .fill()
+            .map((val, columnIndex) => (
+              <View
+                style={{ flex: 1, flexDirection: 'column' }}
+                key={columnIndex}>
+                {Array(size)
+                  .fill()
+                  .map((val, rowIndex) => (
+                    <TouchableOpacity
+                      key={`${rowIndex}.${columnIndex}`}
+                      style={{
+                        backgroundColor:
+                          rowIndex == diffTileIndex[0] &&
+                          columnIndex == diffTileIndex[1]
+                            ? diffTileColor
+                            : `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`,
 
-                      flex: 1,
-                      margin: 2
-                    }}
-                    onPress={() => onTilePress(rowIndex, columnIndex)}
-                  />
-                ))}
-            </View>
-          ))}
+                        flex: 1,
+                        margin: 2
+                      }}
+                      onPress={() => onTilePress(rowIndex, columnIndex)}
+                    />
+                  ))}
+              </View>
+            ))
+        ) : gameState === 'PAUSED' ? (
+          <View style={styles.pausedContainer}>
+            <Image
+              source={require('../../assets/icons/mug.png')}
+              style={styles.pausedIcon}
+            />
+            <Text style={styles.pausedText}>COVFEFE BREAK</Text>
+          </View>
+        ) : (
+          <View style={styles.pausedContainer}>
+            <Image
+              source={require('../../assets/icons/dead.png')}
+              style={styles.pausedIcon}
+            />
+            <Text style={styles.pausedText}>U DED</Text>
+          </View>
+        )}
       </View>
+
+      <TouchableOpacity onPress={onExitPress}>
+        <Image
+          source={require('../../assets/icons/escape.png')}
+          style={styles.exitIcon}
+        />
+      </TouchableOpacity>
+
       <View style={styles.bottomContainer}>
         <View style={{ flex: 1 }}>
           <Text style={styles.counterCount}>{points}</Text>
           <Text style={styles.counterLabel}>points</Text>
         </View>
+        <TouchableOpacity
+          style={{ alignItems: 'center' }}
+          onPress={onBottomBarPress}>
+          <Image source={bottomIcon} style={styles.bottomIcon} />
+        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.counterCount}>{timeLeft}</Text>
           <Text style={styles.counterLabel}>seconds left</Text>

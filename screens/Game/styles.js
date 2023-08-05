@@ -9,6 +9,29 @@ export const styles = StyleSheet.create({
     alignItems: 'center'
   },
 
+  pausedContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  pausedText: {
+    fontFamily: 'dogbyte',
+    textAlign: 'center',
+    color: '#eee',
+    marginTop: 20,
+    fontSize: 60
+  },
+  pausedIcon: {
+    width: 80,
+    height: 80
+  },
+
+  exitIcon: {
+    marginTop: 20,
+    width: scale(90),
+    height: scale(45)
+  },
+
   bottomContainer: {
     flex: 1,
     width: Dimensions.get('window').width * 0.875,
