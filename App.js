@@ -1,5 +1,5 @@
 import React, { useCallback, Component, useEffect, useState } from 'react';
-import { Text, Button, View } from 'react-native';
+import { Text, Button, View, StatusBar } from 'react-native';
 import { Routes } from './screens/Routes';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -43,5 +43,10 @@ export default function App() {
     return null;
   }
 
-  return <Routes />;
+  return (
+    <>
+      <StatusBar barStyle="light-content" />
+      <Routes />
+    </>
+  );
 }
