@@ -12,6 +12,7 @@ import { Audio } from 'expo-av';
 import { styles } from './styles';
 import { Header } from '../../components';
 import { generateRGB, mutateRGB } from '../../utils';
+import { retrieveData, storeData } from '../../utils/storage';
 
 export function Game({ navigation }) {
   const [points, setPoints] = useState(0);
@@ -20,6 +21,8 @@ export function Game({ navigation }) {
   const [size, setSize] = useState(2);
   const [diffTileIndex, setDiffTileIndex] = useState([]);
   const [diffTileColor, setDiffTileColor] = useState();
+  const [bestTime, setBestTime] = useState(0);
+  const [bestScore, setBestScore] = useState(0);
   const [gameState, setGameState] = useState('INGAME'); // 'INGAME', 'PAUSED' and 'LOST'
 
   const tapSound = useRef();
@@ -61,11 +64,25 @@ export function Game({ navigation }) {
   const { width, height } = Dimensions.get('window');
 
   useEffect(() => {
+    retrieveData('highScore').then((val) => setBestScore(val || 0));
+    retrieveData('bestTime').then((val) => setBestTime(val || 0));
+
     loadSounds();
     generateNewRound();
     const interval = setInterval(() => {
       if (gameState === 'INGAME') {
+        if (timeLeft > bestTime) {
+          setBestTime(timeLeft);
+          storeData('bestTime', timeLeft);
+        }
+
         if (timeLeft <= 0) {
+          loseSound.replayAsync();
+          if (points > bestScore) {
+            setBestScore(points);
+            storeData('highScore', points);
+          }
+
           setGameState('LOST');
         } else {
           setTimeLeft((time) => time - 1);
@@ -254,7 +271,15 @@ export function Game({ navigation }) {
             source={require('../../assets/icons/trophy.png')}
             style={styles.bestIcon}
           />
-          <Text style={styles.bestLabel}>0</Text>
+          <Text style={styles.bestLabel}>{bestScore}</Text>
+        </View>
+
+        <View style={styles.bestContainer}>
+          <Image
+            source={require('../../assets/icons/clock.png')}
+            style={styles.bestIcon}
+          />
+          <Text style={styles.bestLabel}>{bestTime}</Text>
         </View>
       </View>
     </View>
