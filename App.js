@@ -1,4 +1,10 @@
-import React, { useCallback, Component, useEffect, useState } from 'react';
+import React, {
+  useCallback,
+  Component,
+  useEffect,
+  useState,
+  useRef
+} from 'react';
 import { Text, Button, View, StatusBar } from 'react-native';
 import { Routes } from './screens/Routes';
 import * as Font from 'expo-font';

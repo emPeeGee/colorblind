@@ -1,5 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Dimensions, TouchableOpacity, Image, Text, View } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  Dimensions,
+  TouchableOpacity,
+  Image,
+  Text,
+  View,
+  Animated
+} from 'react-native';
+import { Audio } from 'expo-av';
+
 import { styles } from './styles';
 import { Header } from '../../components';
 import { generateRGB, mutateRGB } from '../../utils';
@@ -13,9 +22,46 @@ export function Game({ navigation }) {
   const [diffTileColor, setDiffTileColor] = useState();
   const [gameState, setGameState] = useState('INGAME'); // 'INGAME', 'PAUSED' and 'LOST'
 
-  const { width } = Dimensions.get('window');
+  const tapSound = useRef();
+  const tapCorrectSound = useRef();
+  const tapWrongSound = useRef();
+  const pauseInSound = useRef();
+  const pauseOutSound = useRef();
+  const loseSound = useRef();
+
+  const shakeAnim = useRef(new Animated.Value(0));
+
+  async function loadSounds() {
+    const button = await Audio.Sound.createAsync(
+      require('../../assets/sfx/button.wav')
+    );
+    const tileTap = await Audio.Sound.createAsync(
+      require('../../assets/sfx/tile_tap.wav')
+    );
+    const tileWrong = await Audio.Sound.createAsync(
+      require('../../assets/sfx/tile_wrong.wav')
+    );
+    const pauseIn = await Audio.Sound.createAsync(
+      require('../../assets/sfx/pause_in.wav')
+    );
+    const pauseOut = await Audio.Sound.createAsync(
+      require('../../assets/sfx/pause_out.wav')
+    );
+    const lose = await Audio.Sound.createAsync(
+      require('../../assets/sfx/lose.wav')
+    );
+    tapSound.current = button.sound;
+    tapCorrectSound.current = tileTap.sound;
+    tapWrongSound.current = tileWrong.sound;
+    pauseInSound.current = pauseIn.sound;
+    pauseOutSound.current = pauseOut.sound;
+    loseSound.current = lose.sound;
+  }
+
+  const { width, height } = Dimensions.get('window');
 
   useEffect(() => {
+    loadSounds();
     generateNewRound();
     const interval = setInterval(() => {
       if (gameState === 'INGAME') {
@@ -51,8 +97,38 @@ export function Game({ navigation }) {
     if (rowIndex == diffTileIndex[0] && columnIndex == diffTileIndex[1]) {
       setPoints((p) => p + 1);
       setTimeLeft((time) => time + 2);
+      tapCorrectSound.current.replayAsync();
     } else {
       setTimeLeft((time) => time - 2);
+      tapWrongSound.current.replayAsync();
+
+      Animated.sequence([
+        Animated.timing(shakeAnim.current, {
+          toValue: 50,
+          duration: 100,
+          useNativeDriver: true
+        }),
+        Animated.timing(shakeAnim.current, {
+          toValue: -50,
+          duration: 100,
+          useNativeDriver: true
+        }),
+        Animated.timing(shakeAnim.current, {
+          toValue: 50,
+          duration: 100,
+          useNativeDriver: true
+        }),
+        Animated.timing(shakeAnim.current, {
+          toValue: -50,
+          duration: 100,
+          useNativeDriver: true
+        }),
+        Animated.timing(shakeAnim.current, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true
+        })
+      ]).start();
     }
 
     generateNewRound();
@@ -61,14 +137,17 @@ export function Game({ navigation }) {
   const onBottomBarPress = async () => {
     switch (gameState) {
       case 'INGAME': {
+        pauseInSound.current.replayAsync();
         setGameState('PAUSED');
         break;
       }
       case 'PAUSED': {
+        pauseOutSound.current.replayAsync();
         setGameState('INGAME');
         break;
       }
       case 'LOST': {
+        loseSound.current.replayAsync();
         setPoints(0);
         setTimeLeft(15);
         setSize(2);
@@ -80,7 +159,8 @@ export function Game({ navigation }) {
     }
   };
 
-  const onExitPress = () => {
+  const onExitPress = async () => {
+    await tapSound.current.replayAsync();
     navigation.goBack();
   };
 
@@ -95,11 +175,12 @@ export function Game({ navigation }) {
     <View style={styles.container}>
       <Header />
 
-      <View
+      <Animated.View
         style={{
-          height: width * 0.875,
-          width: width * 0.875,
-          flexDirection: 'row'
+          height: height / 2.5,
+          width: height / 2.5,
+          flexDirection: 'row',
+          transform: [{ translateX: shakeAnim.current }]
         }}>
         {gameState === 'INGAME' ? (
           Array(size)
@@ -145,7 +226,7 @@ export function Game({ navigation }) {
             <Text style={styles.pausedText}>U DED</Text>
           </View>
         )}
-      </View>
+      </Animated.View>
 
       <TouchableOpacity onPress={onExitPress}>
         <Image
